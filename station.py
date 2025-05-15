@@ -1,4 +1,4 @@
-# station.py – manuelle Stationswahl + Bewertung
+# station.py – manuelle Stationswahl + Bewertung mit Adminfreigabe
 import streamlit as st
 import sqlite3
 import os
@@ -19,6 +19,28 @@ STATIONS = [
 DB_NAME = os.path.join(os.getcwd(), "wander.db")
 
 
+def get_freigegebene_station():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("""CREATE TABLE IF NOT EXISTS freigabe (
+        id INTEGER PRIMARY KEY,
+        station_id INTEGER
+    )""")
+    c.execute("SELECT station_id FROM freigabe ORDER BY id DESC LIMIT 1")
+    row = c.fetchone()
+    conn.close()
+    return row[0] if row else 1
+
+
+def set_freigegebene_station(station_id):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("DELETE FROM freigabe")
+    c.execute("INSERT INTO freigabe (station_id) VALUES (?)", (station_id,))
+    conn.commit()
+    conn.close()
+
+
 def save_rating(user, station_id, geschmack, alkohol, kater, kommentar):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -31,10 +53,15 @@ def save_rating(user, station_id, geschmack, alkohol, kater, kommentar):
         kater INTEGER,
         kommentar TEXT
     )''')
+    c.execute("SELECT 1 FROM ratings WHERE user=? AND station_id=?", (user, station_id))
+    if c.fetchone():
+        conn.close()
+        return False  # Bewertung existiert bereits
     c.execute('''INSERT INTO ratings (user, station_id, geschmack, alkohol, kater, kommentar)
                  VALUES (?, ?, ?, ?, ?, ?)''', (user, station_id, geschmack, alkohol, kater, kommentar))
     conn.commit()
     conn.close()
+    return True
 
 
 def station_page():
@@ -44,12 +71,10 @@ def station_page():
         st.warning("Bitte zuerst einloggen.")
         return
 
-    station_names = [f"{s['id']}: {s['name']} ({s['wein']})" for s in STATIONS]
-    selection = st.selectbox("Wähle deine aktuelle Station", station_names)
-    station_id = int(selection.split(":")[0])
-    station = next(s for s in STATIONS if s["id"] == station_id)
+    current_station_id = get_freigegebene_station()
+    station = next(s for s in STATIONS if s["id"] == current_station_id)
 
-    st.markdown(f"### 📍 {station['name']} – {station['wein']}")
+    st.markdown(f"### 📍 Aktuelle Station: {station['name']} – {station['wein']}")
 
     geschmack = st.slider("Geschmack", 0, 10, 5)
     alkohol = st.slider("Geschätzter Alkoholgehalt (%)", 5, 15, 10)
@@ -57,5 +82,18 @@ def station_page():
     kommentar = st.text_area("Bemerkung")
 
     if st.button("✅ Bewertung speichern"):
-        save_rating(st.session_state["user"], station_id, geschmack, alkohol, kater, kommentar)
-        st.success("Bewertung gespeichert!")
+        success = save_rating(st.session_state["user"], station["id"], geschmack, alkohol, kater, kommentar)
+        if success:
+            st.success("Bewertung gespeichert!")
+        else:
+            st.info("Du hast diese Station bereits bewertet.")
+
+    # Admin kann Station freigeben
+    if st.session_state.get("user") == "admin":
+        st.markdown("---")
+        st.subheader("🔐 Admin: Freigegebene Station setzen")
+        new_station = st.selectbox("Nächste Station freigeben", [f"{s['id']}: {s['name']}" for s in STATIONS])
+        new_id = int(new_station.split(":" )[0])
+        if st.button("🚦 Station freigeben"):
+            set_freigegebene_station(new_id)
+            st.success(f"Station {new_station} freigegeben!")
