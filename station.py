@@ -85,17 +85,26 @@ def station_page():
     coords = st_javascript(
         """
         async () => {
-            const pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject);
-            });
-            return {lat: pos.coords.latitude, lon: pos.coords.longitude};
+            try {
+                const pos = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+                return {lat: pos.coords.latitude, lon: pos.coords.longitude};
+            } catch (e) {
+                return null;
+            }
         }
         """,
         key="get_location"
     )
 
-    user_lat = coords.get("lat", 0.0)
-    user_lon = coords.get("lon", 0.0)
+    if coords and isinstance(coords, dict):
+        user_lat = coords.get("lat", 0.0)
+        user_lon = coords.get("lon", 0.0)
+    else:
+        st.warning("Standort nicht verfügbar. Bitte Standortfreigabe aktivieren.")
+        user_lat = 0.0
+        user_lon = 0.0
 
     st.write(f"📍 Deine Koordinaten: **{user_lat:.6f}**, **{user_lon:.6f}**")
 
