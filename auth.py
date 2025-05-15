@@ -13,7 +13,7 @@ def init_user_table():
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             password TEXT,
-            team TEXT
+            team TEXT DEFAULT ''
         )
     """)
     conn.commit()
@@ -25,7 +25,7 @@ def register_user(username, password):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     try:
-        c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+        c.execute("INSERT INTO users (username, password, team) VALUES (?, ?, '')", (username, password))
         conn.commit()
         return True
     except sqlite3.IntegrityError:
