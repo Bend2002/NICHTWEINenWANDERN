@@ -6,6 +6,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
+import json
 
 # Dummy-Datenbank der Stationen
 STATIONS = [
@@ -111,8 +112,8 @@ def station_page():
 
     components.html(gps_code, height=0)
 
-    gps_raw = st.experimental_get_query_params().get("gps_data", ["{"lat":0.0,"lon":0.0}"])[0]
-    coords = eval(gps_raw)
+    gps_raw = st.experimental_get_query_params().get("gps_data", ['{"lat":0.0,"lon":0.0}'])[0]
+    coords = json.loads(gps_raw)
     user_lat = coords.get("lat", 0.0)
     user_lon = coords.get("lon", 0.0)
 
