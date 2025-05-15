@@ -1,7 +1,11 @@
-
+# station.py
 import streamlit as st
 import math
 import sqlite3
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import streamlit.components.v1 as components
 
 # Dummy-Datenbank der Stationen
 STATIONS = [
@@ -17,7 +21,7 @@ STATIONS = [
     {"id": 10, "name": "Weingut Zentrale", "qr": "station_10_weingut", "lat": 50.808000, "lon": 5.960000, "wein": "Wein 10"},
 ]
 
-DB_NAME = "data/wander.db"
+DB_NAME = os.path.join(os.getcwd(), "wander.db")
 
 def save_rating(user, station_id, geschmack, alkohol, kater, kommentar):
     conn = sqlite3.connect(DB_NAME)
@@ -54,6 +58,27 @@ def station_page():
 
     qr_input = st.text_input("QR-Code-Inhalt eingeben")
 
+    st.markdown("### 📡 Aktueller Standort (live über Browser)")
+    components.html("""
+    <script>
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const latitude = pos.coords.latitude.toFixed(6);
+        const longitude = pos.coords.longitude.toFixed(6);
+        const streamlitDoc = window.parent.document;
+        streamlitDoc.querySelector('input[data-baseweb="input"]:nth-of-type(1)').value = latitude;
+        streamlitDoc.querySelector('input[data-baseweb="input"]:nth-of-type(2)').value = longitude;
+        streamlitDoc.querySelector('input[data-baseweb="input"]:nth-of-type(1)').dispatchEvent(new Event('input'));
+        streamlitDoc.querySelector('input[data-baseweb="input"]:nth-of-type(2)').dispatchEvent(new Event('input'));
+      },
+      (err) => alert('GPS nicht verfügbar: ' + err.message)
+    );
+    </script>
+    """, height=0)
+
+    user_lat = st.number_input("📍 Latitude", format="%.6f")
+    user_lon = st.number_input("📍 Longitude", format="%.6f")
+
     station = next((s for s in STATIONS if s["qr"] == qr_input), None)
 
     if station:
@@ -80,8 +105,9 @@ def station_page():
         idx = station['id'] - 1
         if idx + 1 < len(STATIONS):
             next_station = STATIONS[idx + 1]
-            dist = haversine(station['lat'], station['lon'], next_station['lat'], next_station['lon'])
-            st.info(f"Nächste Station: {next_station['name']} – ca. {dist:.2f} km entfernt")
+            dist = haversine(user_lat, user_lon, next_station['lat'], next_station['lon'])
+            st.info(f"Nächste Station: {next_station['name']}")
+            st.metric(label="Entfernung", value=f"{dist:.2f} km")
         else:
             st.success("🍾 Ziel erreicht! Das war die letzte Station.")
     elif qr_input:
