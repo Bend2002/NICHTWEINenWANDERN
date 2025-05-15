@@ -4,6 +4,7 @@ from streamlit_javascript import st_javascript
 
 st.title("🧪 GPS Test")
 
+st.write("⏳ Warte auf GPS...")
 coords = st_javascript(
     """
     () => {
@@ -15,6 +16,7 @@ coords = st_javascript(
                 },
                 (err) => {
                     console.warn("Geolocation error:", err);
+                    console.log("JS Fehlerdetails:", err);
                     resolve(null);
                 },
                 { enableHighAccuracy: true }
@@ -23,6 +25,8 @@ coords = st_javascript(
     }
     """
 )
+
+st.write("🔍 Debug: Raw GPS-Daten:", coords)
 
 if coords:
     st.success(f"✅ Standort erhalten:\n\n📍 Latitude: {coords.get('lat')}\n📍 Longitude: {coords.get('lon')}")
