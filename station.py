@@ -68,6 +68,18 @@ def station_page():
     coords = st_javascript(
         """
         async () => {
+            try {
+                const pos = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+                });
+                return { lat: pos.coords.latitude, lon: pos.coords.longitude };
+            } catch (err) {
+                console.warn("GPS error:", err);
+                return null;
+            }
+        }
+        """
+    ) => {
             const pos = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
             });
