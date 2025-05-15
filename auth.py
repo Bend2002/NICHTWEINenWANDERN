@@ -35,6 +35,7 @@ def register_user(username, password):
 
 
 def login_user(username, password):
+    init_user_table()
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
