@@ -79,13 +79,6 @@ def station_page():
             }
         }
         """
-    ) => {
-            const pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
-            });
-            return { lat: pos.coords.latitude, lon: pos.coords.longitude };
-        }
-        """
     )
 
     user_lat = coords.get("lat", 0.0) if coords else 0.0
