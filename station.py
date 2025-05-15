@@ -5,7 +5,7 @@ import sqlite3
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import streamlit.components.v1 as components
+from streamlit_javascript import st_javascript
 
 # Dummy-Datenbank der Stationen
 STATIONS = [
@@ -81,26 +81,23 @@ def station_page():
 
     qr_input = st.text_input("QR-Code-Inhalt eingeben")
 
-    st.markdown("### 📡 Aktueller Standort (live über Browser)")
-    components.html("""
-    <script>
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const latitude = pos.coords.latitude.toFixed(6);
-        const longitude = pos.coords.longitude.toFixed(6);
-        const streamlitDoc = window.parent.document;
-        streamlitDoc.querySelector('input[data-baseweb="input"]:nth-of-type(1)').value = latitude;
-        streamlitDoc.querySelector('input[data-baseweb="input"]:nth-of-type(2)').value = longitude;
-        streamlitDoc.querySelector('input[data-baseweb="input"]:nth-of-type(1)').dispatchEvent(new Event('input'));
-        streamlitDoc.querySelector('input[data-baseweb="input"]:nth-of-type(2)').dispatchEvent(new Event('input'));
-      },
-      (err) => alert('GPS nicht verfügbar: ' + err.message)
-    );
-    </script>
-    """, height=0)
+    st.markdown("### 📡 Aktueller Standort (live per GPS)")
+    coords = st_javascript(
+        """
+        async () => {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+            });
+            return {lat: pos.coords.latitude, lon: pos.coords.longitude};
+        }
+        """,
+        key="get_location"
+    )
 
-    user_lat = st.number_input("📍 Latitude", format="%.6f")
-    user_lon = st.number_input("📍 Longitude", format="%.6f")
+    user_lat = coords.get("lat", 0.0)
+    user_lon = coords.get("lon", 0.0)
+
+    st.write(f"📍 Deine Koordinaten: **{user_lat:.6f}**, **{user_lon:.6f}**")
 
     station = next((s for s in STATIONS if s["qr"] == qr_input), None)
 
