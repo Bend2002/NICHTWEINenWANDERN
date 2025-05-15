@@ -23,6 +23,7 @@ STATIONS = [
 
 DB_NAME = os.path.join(os.getcwd(), "wander.db")
 
+
 def save_rating(user, station_id, geschmack, alkohol, kater, kommentar):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -40,6 +41,7 @@ def save_rating(user, station_id, geschmack, alkohol, kater, kommentar):
     conn.commit()
     conn.close()
 
+
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371
     phi1 = math.radians(lat1)
@@ -48,6 +50,27 @@ def haversine(lat1, lon1, lat2, lon2):
     dlambda = math.radians(lon2 - lon1)
     a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def bearing(lat1, lon1, lat2, lon2):
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_lon = math.radians(lon2 - lon1)
+    y = math.sin(delta_lon) * math.cos(phi2)
+    x = math.cos(phi1)*math.sin(phi2) - math.sin(phi1)*math.cos(phi2)*math.cos(delta_lon)
+    brng = math.atan2(y, x)
+    return (math.degrees(brng) + 360) % 360
+
+
+def draw_arrow(angle):
+    fig, ax = plt.subplots(figsize=(2, 2))
+    ax.arrow(0.5, 0.5, 0.3 * math.cos(math.radians(angle)), 0.3 * math.sin(math.radians(angle)),
+             head_width=0.05, head_length=0.05, fc='red', ec='black')
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+    st.pyplot(fig)
+
 
 def station_page():
     st.title("📍 Station entdecken")
@@ -103,11 +126,17 @@ def station_page():
 
         st.markdown("### 🧭 Nächste Station")
         idx = station['id'] - 1
-        if idx + 1 < len(STATIONS):
+        while idx + 1 < len(STATIONS):
             next_station = STATIONS[idx + 1]
             dist = haversine(user_lat, user_lon, next_station['lat'], next_station['lon'])
-            st.info(f"Nächste Station: {next_station['name']}")
-            st.metric(label="Entfernung", value=f"{dist:.2f} km")
+            if dist > 0.002:
+                st.info(f"Nächste Station: {next_station['name']}")
+                st.metric(label="Entfernung", value=f"{dist*1000:.1f} m")
+                angle = bearing(user_lat, user_lon, next_station['lat'], next_station['lon'])
+                draw_arrow(angle)
+                break
+            else:
+                idx += 1
         else:
             st.success("🍾 Ziel erreicht! Das war die letzte Station.")
     elif qr_input:
