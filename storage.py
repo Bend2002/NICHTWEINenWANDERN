@@ -1,7 +1,9 @@
 
 import sqlite3
+import os
 
-DB_NAME = "data/wander.db"
+# Dynamischer Pfad für Cloud/Lokalbetrieb
+DB_NAME = os.path.join(os.getcwd(), "wander.db")
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
