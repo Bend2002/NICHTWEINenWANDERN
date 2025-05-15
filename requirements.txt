@@ -4,3 +4,4 @@ numpy
 scipy
 qrcode
 Pillow
+matplotlib
