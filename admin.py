@@ -5,6 +5,9 @@ import os
 import pandas as pd
 
 DB_NAME = os.path.join(os.getcwd(), "wander.db")
+if os.path.exists(DB_NAME):
+    os.remove(DB_NAME)
+    st.warning("❌ Datenbank wurde gelöscht. Bitte App neu laden.")
 
 STATIONS = [
     {"id": 1, "name": "Westpark"},
