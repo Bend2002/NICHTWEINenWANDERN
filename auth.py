@@ -45,6 +45,7 @@ def login_user(username, password):
 
 
 def auth_page():
+    init_user_table()
     st.title("🔐 Login / Registrierung")
 
     mode = st.radio("Was möchtest du tun?", ["Einloggen", "Registrieren"])
