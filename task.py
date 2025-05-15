@@ -1,7 +1,9 @@
 import streamlit as st
 import sqlite3
 
-DB_NAME = "data/wander.db"
+import os
+DB_NAME = os.path.join(os.getcwd(), "wander.db")
+
 
 def init_task_db():
     conn = sqlite3.connect(DB_NAME)
