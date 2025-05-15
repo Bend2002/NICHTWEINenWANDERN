@@ -67,20 +67,23 @@ def station_page():
 
     coords = st_javascript(
         """
-        async () => {
-            try {
-                const pos = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
-                });
-                return { lat: pos.coords.latitude, lon: pos.coords.longitude };
-            } catch (err) {
-                console.warn("GPS error:", err);
-                return null;
-            }
+        () => {
+            return new Promise((resolve) => {
+                const watch = navigator.geolocation.watchPosition(
+                    (pos) => {
+                        resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+                        navigator.geolocation.clearWatch(watch);
+                    },
+                    (err) => {
+                        console.warn("Geolocation error:", err);
+                        resolve(null);
+                    },
+                    { enableHighAccuracy: true }
+                );
+            });
         }
         """
     )
-
     user_lat = coords.get("lat", 0.0) if coords else 0.0
     user_lon = coords.get("lon", 0.0) if coords else 0.0
 
