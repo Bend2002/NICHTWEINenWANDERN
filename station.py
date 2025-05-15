@@ -5,8 +5,7 @@ import sqlite3
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import streamlit.components.v1 as components
-import json
+from streamlit_javascript import st_javascript
 
 # Dummy-Datenbank der Stationen
 STATIONS = [
@@ -23,24 +22,6 @@ STATIONS = [
 ]
 
 DB_NAME = os.path.join(os.getcwd(), "wander.db")
-
-
-def save_rating(user, station_id, geschmack, alkohol, kater, kommentar):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS ratings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user TEXT,
-        station_id INTEGER,
-        geschmack INTEGER,
-        alkohol INTEGER,
-        kater INTEGER,
-        kommentar TEXT
-    )''')
-    c.execute('''INSERT INTO ratings (user, station_id, geschmack, alkohol, kater, kommentar)
-                 VALUES (?, ?, ?, ?, ?, ?)''', (user, station_id, geschmack, alkohol, kater, kommentar))
-    conn.commit()
-    conn.close()
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -84,77 +65,18 @@ def station_page():
 
     st.markdown("### 📡 Aktueller Standort (live per GPS)")
 
-    gps_code = '''
-    <iframe srcdoc="""
-    <script>
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        parent.postMessage(JSON.stringify({lat: pos.coords.latitude, lon: pos.coords.longitude}), '*');
-      },
-      (err) => {
-        parent.postMessage(JSON.stringify({lat: 0.0, lon: 0.0}), '*');
-      },
-      { enableHighAccuracy: true }
-    );
-    </script>
-    """ width="0" height="0"></iframe>
-    <script>
-    window.addEventListener("message", (event) => {
-      const coords = JSON.parse(event.data);
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = "gps_data";
-      input.value = event.data;
-      document.body.appendChild(input);
-    });
-    </script>
-    '''
+    coords = st_javascript(
+        """
+        async () => {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+            });
+            return { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        }
+        """
+    )
 
-    components.html(gps_code, height=0)
-
-    gps_raw = st.query_params.get("gps_data", ['{"lat":0.0,"lon":0.0}'])[0]
-    coords = json.loads(gps_raw)
-    user_lat = coords.get("lat", 0.0)
-    user_lon = coords.get("lon", 0.0)
+    user_lat = coords.get("lat", 0.0) if coords else 0.0
+    user_lon = coords.get("lon", 0.0) if coords else 0.0
 
     st.write(f"📍 Deine Koordinaten: **{user_lat:.6f}**, **{user_lon:.6f}**")
-
-    station = next((s for s in STATIONS if s["qr"] == qr_input), None)
-
-    if station:
-        st.success(f"Gefunden: {station['name']} – {station['wein']}")
-
-        st.markdown("### 🧪 Bewertung")
-        geschmack = st.slider("Geschmack", 0, 10, 5)
-        alkohol = st.slider("Geschätzter Alkoholgehalt (%)", 5, 15, 10)
-        kater = st.slider("Katergrad", 0, 10, 3)
-        kommentar = st.text_area("Bemerkung")
-
-        if st.button("Bewertung speichern"):
-            save_rating(
-                st.session_state["user"],
-                station["id"],
-                geschmack,
-                alkohol,
-                kater,
-                kommentar
-            )
-            st.success("Bewertung gespeichert ✅")
-
-        st.markdown("### 🧭 Nächste Station")
-        idx = station['id'] - 1
-        while idx + 1 < len(STATIONS):
-            next_station = STATIONS[idx + 1]
-            dist = haversine(user_lat, user_lon, next_station['lat'], next_station['lon'])
-            if dist > 0.002:
-                st.info(f"Nächste Station: {next_station['name']}")
-                st.metric(label="Entfernung", value=f"{dist*1000:.1f} m")
-                angle = bearing(user_lat, user_lon, next_station['lat'], next_station['lon'])
-                draw_arrow(angle)
-                break
-            else:
-                idx += 1
-        else:
-            st.success("🍾 Ziel erreicht! Das war die letzte Station.")
-    elif qr_input:
-        st.error("Ungültiger QR-Code")
