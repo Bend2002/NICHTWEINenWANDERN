@@ -21,6 +21,7 @@ def init_user_table():
 
 
 def register_user(username, password):
+    init_user_table()
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     try:
