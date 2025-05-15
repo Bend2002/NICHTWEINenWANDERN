@@ -84,18 +84,25 @@ def station_page():
     st.markdown("### 📡 Aktueller Standort (live per GPS)")
     coords = st_javascript(
         """
-        async () => {
-            try {
-                const pos = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject);
-                });
-                return {lat: pos.coords.latitude, lon: pos.coords.longitude};
-            } catch (e) {
-                return null;
-            }
+        () => {
+            let coords = null;
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    coords = {lat: pos.coords.latitude, lon: pos.coords.longitude};
+                    window.dispatchEvent(new CustomEvent("streamlit:coordinates", {detail: coords}));
+                },
+                (err) => {
+                    coords = null;
+                },
+                { enableHighAccuracy: true }
+            );
+            return new Promise((resolve) => {
+                window.addEventListener("streamlit:coordinates", (e) => resolve(e.detail), { once: true });
+                setTimeout(() => resolve(null), 3000);
+            });
         }
         """,
-        key="get_location"
+        key="live_coords"
     )
 
     if coords and isinstance(coords, dict):
