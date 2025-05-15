@@ -1,60 +1,75 @@
+# task.py – Team-Aufgaben pro Station
 import streamlit as st
 import sqlite3
-
 import os
+
 DB_NAME = os.path.join(os.getcwd(), "wander.db")
 
+# Aufgabenbank pro Station
+AUFGABEN = {
+    1: "Wie viele Trauben sind ca. nötig für eine Flasche?",
+    2: "Was denkst du: Wie viel Alkohol hat der Wein?",
+    3: "Wie viele Jahre alt ist der Wein?",
+    4: "Wie viele Kalorien hat ein Glas von diesem Wein?",
+}
 
-def init_task_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        team_id INTEGER,
-        station_id INTEGER,
-        aufgabe TEXT,
-        loesung TEXT,
-        punkte INTEGER
-    )''')
-    conn.commit()
-    conn.close()
-
-def save_task_result(team_id, station_id, aufgabe, loesung, punkte):
+def save_team_solution(teamname, station_id, antwort):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("""
-        INSERT INTO tasks (team_id, station_id, aufgabe, loesung, punkte)
-        VALUES (?, ?, ?, ?, ?)
-    """, (team_id, station_id, aufgabe, loesung, punkte))
+        CREATE TABLE IF NOT EXISTS aufgaben (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            team TEXT,
+            station_id INTEGER,
+            antwort TEXT
+        )
+    """)
+    c.execute("SELECT 1 FROM aufgaben WHERE team = ? AND station_id = ?", (teamname, station_id))
+    if c.fetchone():
+        conn.close()
+        return False
+
+    c.execute("INSERT INTO aufgaben (team, station_id, antwort) VALUES (?, ?, ?)",
+              (teamname, station_id, antwort))
     conn.commit()
     conn.close()
+    return True
+
 
 def task_page():
-    st.title("🧩 Wein-Aufgabe")
-
+    st.title("👯‍♂️ Team-Aufgabe")
     if "user" not in st.session_state:
         st.warning("Bitte zuerst einloggen.")
         return
 
-    station_id = st.number_input("Station-ID", min_value=1, max_value=10, step=1)
-    aufgabe = st.text_area("Aufgabe eingeben (z. B. Schätzfrage, Quiz etc.)")
-    loesung = st.text_input("Lösung (freiwillig)")
-    punkte = st.slider("Punkte (0–10)", 0, 10, 5)
+    # Teamname ermitteln
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT team FROM users WHERE username = ?", (st.session_state["user"],))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        st.error("Kein Team gefunden.")
+        return
+    teamname = row[0]
 
-    if st.button("Aufgabe abspeichern"):
-        # Team-ID herausfinden
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute("SELECT team_id FROM users WHERE name = ?", (st.session_state["user"],))
-        result = c.fetchone()
-        conn.close()
+    # Aktuelle Station aus freigabe-Tabelle lesen
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT station_id FROM freigabe ORDER BY id DESC LIMIT 1")
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        st.error("Keine Station freigegeben.")
+        return
+    station_id = row[0]
 
-        if result:
-            team_id = result[0]
-            save_task_result(team_id, station_id, aufgabe, loesung, punkte)
-            st.success("Aufgabe erfolgreich gespeichert ✅")
+    frage = AUFGABEN.get(station_id, "Aufgabe für diese Station folgt bald...")
+    st.subheader(frage)
+
+    antwort = st.text_input("Antwort eingeben")
+    if st.button("Antwort absenden"):
+        if save_team_solution(teamname, station_id, antwort):
+            st.success("Antwort gespeichert für dein Team!")
         else:
-            st.error("Kein Team gefunden. Bitte Team bilden.")
-
-# Datenbank initialisieren beim Laden
-init_task_db()
+            st.info("Dein Team hat für diese Station schon geantwortet.")
