@@ -12,7 +12,11 @@ st.set_page_config(page_title="WanderWinzer", page_icon="🍷", layout="centered
 DB_NAME = os.path.join(os.getcwd(), "wander.db")
 if not os.path.exists(DB_NAME):
     conn = sqlite3.connect(DB_NAME)
-    conn.execute("CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT, team TEXT)")
+    conn.execute("CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY,
+    password TEXT,
+    team TEXT DEFAULT ''
+)")
     conn.commit()
     conn.close()
 
