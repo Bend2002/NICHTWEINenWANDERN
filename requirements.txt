@@ -5,3 +5,4 @@ scipy
 qrcode
 Pillow
 matplotlib
+streamlit-javascript
