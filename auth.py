@@ -1,24 +1,8 @@
-
+# auth.py
 import streamlit as st
-import qrcode
-from io import BytesIO
-from PIL import Image
 from storage import init_db, add_user, get_user, get_all_users, assign_team, get_all_teams, reset_password, delete_team
 
 init_db()
-
-STATIONS = [
-    {"id": 1, "name": "Westpark", "qr": "station_1_westpark"},
-    {"id": 2, "name": "Aussichtspunkt Nord", "qr": "station_2_aussicht"},
-    {"id": 3, "name": "Hohlweg", "qr": "station_3_hohlweg"},
-    {"id": 4, "name": "Kirschgarten", "qr": "station_4_kirschgarten"},
-    {"id": 5, "name": "Hochsitz", "qr": "station_5_hochsitz"},
-    {"id": 6, "name": "Rebhang Süd", "qr": "station_6_rebhang"},
-    {"id": 7, "name": "Winzerkreuz", "qr": "station_7_kreuz"},
-    {"id": 8, "name": "Quellenpfad", "qr": "station_8_quelle"},
-    {"id": 9, "name": "Eichenwäldchen", "qr": "station_9_eiche"},
-    {"id": 10, "name": "Weingut Zentrale", "qr": "station_10_weingut"},
-]
 
 def login():
     st.title("🍷 WanderWinzer Login")
@@ -86,12 +70,3 @@ def admin_panel():
     if st.button("Team löschen"):
         delete_team(team_dict[team_sel])
         st.success("Team gelöscht")
-
-    st.subheader("📷 QR-Codes für Stationen")
-    for station in STATIONS:
-        st.markdown(f"**{station['name']}**")
-        qr_img = qrcode.make(station['qr'])
-        buf = BytesIO()
-        qr_img.save(buf)
-        st.image(Image.open(buf), width=150)
-        st.code(station['qr'], language='text')
