@@ -5,7 +5,7 @@ import sqlite3
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from streamlit_javascript import st_javascript
+import streamlit.components.v1 as components
 
 # Dummy-Datenbank der Stationen
 STATIONS = [
@@ -82,36 +82,39 @@ def station_page():
     qr_input = st.text_input("QR-Code-Inhalt eingeben")
 
     st.markdown("### 📡 Aktueller Standort (live per GPS)")
-    coords = st_javascript(
-        """
-        () => {
-            let coords = null;
-            navigator.geolocation.watchPosition(
-                (pos) => {
-                    coords = {lat: pos.coords.latitude, lon: pos.coords.longitude};
-                    window.dispatchEvent(new CustomEvent("streamlit:coordinates", {detail: coords}));
-                },
-                (err) => {
-                    coords = null;
-                },
-                { enableHighAccuracy: true }
-            );
-            return new Promise((resolve) => {
-                window.addEventListener("streamlit:coordinates", (e) => resolve(e.detail), { once: true });
-                setTimeout(() => resolve(null), 3000);
-            });
-        }
-        """,
-        key="live_coords"
-    )
 
-    if coords and isinstance(coords, dict):
-        user_lat = coords.get("lat", 0.0)
-        user_lon = coords.get("lon", 0.0)
-    else:
-        st.warning("Standort nicht verfügbar. Bitte Standortfreigabe aktivieren.")
-        user_lat = 0.0
-        user_lon = 0.0
+    gps_code = '''
+    <iframe srcdoc="""
+    <script>
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        parent.postMessage(JSON.stringify({lat: pos.coords.latitude, lon: pos.coords.longitude}), '*');
+      },
+      (err) => {
+        parent.postMessage(JSON.stringify({lat: 0.0, lon: 0.0}), '*');
+      },
+      { enableHighAccuracy: true }
+    );
+    </script>
+    """ width="0" height="0"></iframe>
+    <script>
+    window.addEventListener("message", (event) => {
+      const coords = JSON.parse(event.data);
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "gps_data";
+      input.value = event.data;
+      document.body.appendChild(input);
+    });
+    </script>
+    '''
+
+    components.html(gps_code, height=0)
+
+    gps_raw = st.experimental_get_query_params().get("gps_data", ["{"lat":0.0,"lon":0.0}"])[0]
+    coords = eval(gps_raw)
+    user_lat = coords.get("lat", 0.0)
+    user_lon = coords.get("lon", 0.0)
 
     st.write(f"📍 Deine Koordinaten: **{user_lat:.6f}**, **{user_lon:.6f}**")
 
