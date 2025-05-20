@@ -64,7 +64,7 @@ def auth_page():
         if st.button("Einloggen"):
             if login_user(username, password):
                 st.session_state["user"] = username
-                st.experimental_set_query_params(user=username)
+                st.query_params["user"] = username
                 st.success(f"Willkommen, {username}!")
                 st.rerun()
             else:
