@@ -27,7 +27,7 @@ if not os.path.exists(DB_NAME):
 
 # 🔐 Persistenter Login über ?user=... aus URL
 if "user" not in st.session_state:
-    params = st.query_params
+    params = st.experimental_get_query_params()
     if "user" in params:
         st.session_state["user"] = params["user"][0]
 
